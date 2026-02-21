@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cinematic Grid Animation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Montserrat:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { background: #0a0a0a; font-family: 'Montserrat', sans-serif; }
+
+    .cinematic-grid-section {
+      position: relative;
+      width: 100%;
+      height: 100vh;
+      min-height: 600px;
+      overflow: hidden;
+      background: #0a0a0a;
+    }
+
+    .cinematic-grid-viewport {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+
+    .cinematic-grid-track {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 300vw;
+      height: 100%;
+      display: flex;
+      transition: transform 2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .cinematic-grid-section.phase-1-done .cinematic-grid-track {
+      transform: translateX(-100vw);
+    }
+
+    .cinematic-grid-layer {
+      flex: 0 0 100vw;
+      width: 100vw;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cinematic-grid-inner {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      width: min(90vw, 90vh);
+      height: min(90vw, 90vh);
+      gap: 2px;
+    }
+
+    .cinematic-grid-cell {
+      background: rgba(190, 164, 125, 0.08);
+      border: 1px solid rgba(190, 164, 125, 0.12);
+    }
+
+    .cinematic-grid-layer--center .cinematic-grid-cell {
+      background: rgba(190, 164, 125, 0.1);
+      border-color: rgba(190, 164, 125, 0.18);
+    }
+
+    .cinematic-grid-split-wrapper {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .cinematic-grid-section.phase-1-done .cinematic-grid-split-wrapper {
+      display: flex;
+    }
+
+    .cinematic-grid-split-half {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      transition: transform 1.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .cinematic-grid-split-half.left { transform: translateX(0); }
+    .cinematic-grid-split-half.right { transform: translateX(0); }
+
+    .cinematic-grid-section.phase-2-active .cinematic-grid-split-half.left {
+      transform: translateX(-100%);
+    }
+    .cinematic-grid-section.phase-2-active .cinematic-grid-split-half.right {
+      transform: translateX(100%);
+    }
+
+    .cinematic-grid-split-inner {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      width: min(45vw, 45vh);
+      height: min(90vw, 90vh);
+      gap: 2px;
+    }
+
+    .cinematic-grid-split-inner .cinematic-grid-cell {
+      background: rgba(190, 164, 125, 0.1);
+      border-color: rgba(190, 164, 125, 0.18);
+    }
+
+    .cinematic-grid-text-block {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+      opacity: 0;
+      transform: translateY(40px);
+      transition: opacity 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s,
+                  transform 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.3s;
+    }
+
+    .cinematic-grid-section.phase-2-active .cinematic-grid-text-block {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .cinematic-grid-text-block h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-weight: 600;
+      color: #F9F5EB;
+      letter-spacing: 0.02em;
+      margin-bottom: 0.5rem;
+      text-align: center;
+    }
+
+    .cinematic-grid-text-block p {
+      font-size: clamp(0.875rem, 1.5vw, 1rem);
+      color: rgba(201, 181, 149, 0.9);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <section class="cinematic-grid-section" id="gridSection">
+    <div class="cinematic-grid-viewport">
+      <div class="cinematic-grid-track">
+        <div class="cinematic-grid-layer cinematic-grid-layer--left">
+          <div class="cinematic-grid-inner" id="leftGrid"></div>
+        </div>
+        <div class="cinematic-grid-layer cinematic-grid-layer--center">
+          <div class="cinematic-grid-inner" id="centerGrid"></div>
+        </div>
+        <div class="cinematic-grid-layer cinematic-grid-layer--right">
+          <div class="cinematic-grid-inner" id="rightGrid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cinematic-grid-split-wrapper" id="splitWrapper">
+      <div class="cinematic-grid-split-half left">
+        <div class="cinematic-grid-inner cinematic-grid-split-inner" id="splitLeft"></div>
+      </div>
+      <div class="cinematic-grid-split-half right">
+        <div class="cinematic-grid-inner cinematic-grid-split-inner" id="splitRight"></div>
+      </div>
+    </div>
+
+    <div class="cinematic-grid-text-block">
+      <p>Experience the Studio</p>
+      <h2>Where Ideas<br>Come to Life</h2>
+    </div>
+  </section>
+
+  <div style="height: 100vh; background: #111; padding: 2rem; color: #666;">
+    Scroll down to trigger the split animation
+  </div>
+
+  <script>
+    function createGridCells(container, count) {
+      for (let i = 0; i < count; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'cinematic-grid-cell';
+        container.appendChild(cell);
+      }
+    }
+
+    createGridCells(document.getElementById('leftGrid'), 16);
+    createGridCells(document.getElementById('centerGrid'), 16);
+    createGridCells(document.getElementById('rightGrid'), 16);
+    createGridCells(document.getElementById('splitLeft'), 8);
+    createGridCells(document.getElementById('splitRight'), 8);
+
+    const section = document.getElementById('gridSection');
+    const splitWrapper = document.getElementById('splitWrapper');
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => section.classList.add('phase-1-done'));
+    });
+
+
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio > 0.3) {
+          section.classList.add('phase-2-active');
+        }
+      });
+    }, { threshold: [0.3] });
+
+    observer.observe(section);
+  </script>
+</body>
+</html>
