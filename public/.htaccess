@@ -1,0 +1,11 @@
+# Serve JavaScript modules with correct MIME type (fixes "Strict MIME type checking" error)
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+</IfModule>
+
+# Fallback: set via header if mod_headers is available
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|mjs)$">
+    Header set Content-Type "application/javascript"
+  </FilesMatch>
+</IfModule>

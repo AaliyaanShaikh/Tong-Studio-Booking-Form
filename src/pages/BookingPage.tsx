@@ -29,6 +29,9 @@ const STEP_TRANSITION = { duration: 0.3 };
 const INPUT_CLASS =
   'rounded-xl border-2 border-stone-200 font-sans px-5 py-4 focus:outline-none focus:ring-2 focus:ring-champagne-400 focus:border-transparent';
 
+const API_BASE = (import.meta.env.VITE_API_URL ?? '').replace(/\/$/, '');
+const SUBMIT_BOOKING_URL = API_BASE ? `${API_BASE}/api/submit-booking.php` : '/api/submit-booking.php';
+
 const BookingPage: FC = () => {
   const [step, setStep] = useState(1);
   const [studioIndex, setStudioIndex] = useState(0);
@@ -43,6 +46,8 @@ const BookingPage: FC = () => {
     phone: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const canProceed =
     step === 1 ? !!booking.setup : step === 2 ? !!booking.date : step === 3 ? !!booking.timing : true;
@@ -116,9 +121,40 @@ const BookingPage: FC = () => {
     }));
   };
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSubmitError(null);
+    setSubmitting(true);
+    try {
+      const res = await fetch(SUBMIT_BOOKING_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          setup: booking.setup,
+          date: booking.date,
+          timing: booking.timing,
+          addons: booking.addons,
+          extraRequests: booking.extraRequests,
+          name: booking.name,
+          email: booking.email,
+          phone: booking.phone,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSubmitError(typeof data.error === 'string' ? data.error : 'Booking could not be submitted. Please try again.');
+        return;
+      }
+      if (data.success) {
+        setSubmitted(true);
+      } else {
+        setSubmitError(typeof data.error === 'string' ? data.error : 'Something went wrong. Please try again.');
+      }
+    } catch {
+      setSubmitError('Network error. Please check your connection and try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (submitted) {
@@ -400,19 +436,27 @@ const BookingPage: FC = () => {
                 </div>
               </div>
 
+              {submitError && (
+                <p className="rounded-xl bg-red-50 border border-red-200 text-red-700 font-sans text-sm px-4 py-3">
+                  {submitError}
+                </p>
+              )}
+
               <div className="flex flex-col-reverse sm:flex-row gap-3 sm:gap-4 pt-4">
                 <button
                   type="button"
-                  onClick={() => setStep(3)}
-                  className="w-full sm:w-auto px-8 py-4 rounded-full border-2 border-stone-300 text-charcoal-900 font-sans font-semibold hover:bg-stone-100 active:bg-stone-200 transition-colors touch-manipulation"
+                  onClick={() => { setStep(3); setSubmitError(null); }}
+                  disabled={submitting}
+                  className="w-full sm:w-auto px-8 py-4 rounded-full border-2 border-stone-300 text-charcoal-900 font-sans font-semibold hover:bg-stone-100 active:bg-stone-200 transition-colors touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Back
                 </button>
                 <button
                   type="submit"
-                  className="w-full sm:flex-1 py-4 rounded-full bg-charcoal-900 text-white font-sans text-sm font-bold uppercase tracking-[0.2em] hover:bg-charcoal-800 active:bg-charcoal-950 transition-colors touch-manipulation"
+                  disabled={submitting}
+                  className="w-full sm:flex-1 py-4 rounded-full bg-charcoal-900 text-white font-sans text-sm font-bold uppercase tracking-[0.2em] hover:bg-charcoal-800 active:bg-charcoal-950 transition-colors touch-manipulation disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  Confirm booking
+                  {submitting ? 'Submitting…' : 'Confirm booking'}
                 </button>
               </div>
             </motion.form>
